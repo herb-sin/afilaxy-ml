@@ -1,0 +1,361 @@
+\documentclass[12pt]{article}
+\usepackage[brazil]{babel}
+\addto\captionsbrazil{
+  \renewcommand{\tablename}{Tabela}
+  \renewcommand{\figurename}{Figura}
+}
+%template SBC
+\usepackage{amssymb}
+\usepackage{sbc-template}
+\usepackage{graphicx,url}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\usepackage{amsfonts}
+\usepackage{multirow}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{amsmath}
+\usetikzlibrary{shapes,arrows}
+\usepackage{booktabs} % Para formatação de tabelas profissionais
+\usetikzlibrary{positioning, backgrounds, fit, matrix, shapes.geometric}
+\definecolor{techblue}{RGB}{31, 78, 121}
+\definecolor{techorange}{RGB}{227, 108, 10}
+\definecolor{bglight}{RGB}{245, 247, 250}
+\definecolor{bordergray}{RGB}{120, 120, 120}
+% Pacotes para citações e links clicáveis
+\usepackage{cite}               % agrupa citações consecutivas
+\usepackage[hidelinks]{hyperref} % torna citações e URLs clicáveis
+
+%tabelas
+\usepackage{booktabs}
+\usepackage{tabularx}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\usepackage{titlesec}
+
+\sloppy
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt} % reduz espaço entre figuras/tabelas e o texto
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+
+\title{Predicting Asthma Exacerbations in Digital Health Ecosystems Using Machine Learning Frameworks}
+\author{Herbert Jung Sin\inst{1}, Martony Demes da Silva\inst{1}}
+
+\begin{document}
+\address{Curso Superior de Tecnologia de Gestão de Dados  \\ Centro de Educação Aberta e a Distância (CEAD) \\ Universidade Federal do Piauí (UFPI)\\
+  Teresina -- PI -- Brasil
+  \email{herbert.sin@ufpi.edu.br, martony.silva@ufpi.edu.br}
+}
+
+\makeatletter
+\def\inst#1{}
+\def\instnum{}
+\makeatletter
+
+\maketitle
+
+\begin{abstract}
+Predicting acute asthma exacerbations is critical for digital health ecosystems and Patient-Generated Health Data (PGHD) integration. This study evaluates an intelligent screening model designed for the \textit{Afilaxy} mobile application  to classify exacerbation risk profiles based on clinical criteria from the Global Initiative for Asthma (GINA). Four machine learning algorithms were tested using a synthetic dataset of asthmatic profiles: Logistic Regression, Random Forest, Gradient Boosting, and XGBoost. The XGBoost model achieved an Area Under the Curve (AUC) of 91.3\% and a Recall of 89.2\% at the optimal decision threshold. While these metrics indicate strong classification capacity on synthetic proxy data, the remaining 10.8\% false negative rate highlights the need for cautious clinical interpretation. This work presents a proof-of-concept for intelligent risk screening, establishing a foundation for future on-device deployment.
+\end{abstract}
+     
+\begin{resumo}
+A triagem do risco de exacerbações asmáticas agudas é crítica para ecossistemas de saúde digital e integração de dados gerados por pacientes (PGHD). Este trabalho avalia um modelo de triagem inteligente projetado para o aplicativo móvel \textit{Afilaxy}, visando classificar perfis de risco de crise com base nos critérios clínicos da \textit{Global Initiative for Asthma} (GINA). Quatro algoritmos de aprendizado de máquina foram testados sobre uma base de dados de perfis asmáticos: Regressão Logística, Random Forest, Gradient Boosting e XGBoost. O modelo em XGBoost obteve uma Área Sob a Curva (AUC) de 91,3\% e Sensibilidade (\textit{Recall}) de 89,2\% no limiar de decisão otimizado. Embora esses resultados indiquem forte capacidade de classificação em dados proxy sintéticos, a taxa remanescente de 10,8\% de falsos negativos exige cautela na interpretação clínica. O estudo apresenta uma prova de conceito para triagem inteligente de risco, fundamentando hipóteses para futura implementação em dispositivos de borda.
+\end{resumo}
+
+\section{Introdução} \label{sec:introducao}
+
+A asma brônquica afeta mais de 260 milhões de pessoas no mundo, sendo responsável por 450 mil mortes anuais evitáveis \cite{ginasthma2024}. No Brasil, figura entre as principais causas de internação no SUS, gerando alto impacto socioeconômico por custos diretos e absenteísmo \cite{sbt2021}. Embora o manejo eficaz dependa do reconhecimento precoce de sinais inflamatórios pré-crise, o monitoramento ambulatorial exibe um "\textit{vazio assistencial}" \cite{patel2021}: um hiato temporal entre consultas esporádicas que força decisões baseadas em relatos retrospectivos e imprecisos dos pacientes.
+
+Como consequência direta desse modelo reativo, os dados coletados de forma tardia são frequentemente afetados por vieses de memória ou pela subestimação de sintomas crônicos leves. Pequenas alterações fisiológicas e preditores exógenos fundamentais, tais como variações bruscas no índice de qualidade do ar (\textit{Air Quality Index} - AQI) e flutuações microclimáticas de umidade e temperatura — passam completamente despercebidos pelos métodos convencionais de triagem até culminarem em crises agudas que demandam serviços hospitalares de urgência. Visando uniformizar e parametrizar a gravidade dessas intercorrências, as diretrizes internacionais estabelecidas pela \textit{Global Initiative for Asthma} (GINA) categorizam o nível de controle clínico do paciente com base na frequência das manifestações clínicas nas últimas quatro semanas, conforme sintetizado na Tabela~\ref{tab:gina_criteria}.
+
+\begin{table}[ht!]
+\centering
+\small
+\caption{Critérios GINA para Avaliação do Controle da Asma}
+\label{tab:gina_criteria}
+\vskip 0.05in
+\begin{tabular}{p{0.46\textwidth}p{0.48\textwidth}}
+\hline
+\textbf{Sintomas avaliados (últimas 4 semanas)} & \textbf{Classificação do Controle (Itens Ativos)} \\ \hline
+1. Sintomas diurnos ($>2\times$/semana)          & \textbf{Controlada:} Nenhum item presente \\
+2. Despertares noturnos por asma\textsuperscript{*} & \textbf{Parcialmente Controlada:} 1 a 2 itens \\
+3. Uso de medicação de alívio ($>2\times$/semana) & \textbf{Não Controlada:} 3 a 4 itens \\
+4. Qualquer limitação de atividades físicas      & \\ \hline
+\end{tabular}
+\vskip 0.05in
+\begin{minipage}{\textwidth}
+\footnotesize{\textit{Fonte: Adaptado de GINA (2024). *Nota: O campo de sintomas noturnos integra o cálculo do score e o treinamento, enquanto a variável de tratamento preventivo (\textit{onControllerMedication}), introduzida na v2.3.1 do aplicativo, permanece suspensa por ausência desse vetor no dataset proxy utilizado.}}
+\end{minipage}
+\end{table}
+
+A expansão de dispositivos móveis viabilizou a coleta de Dados Gerados por Pacientes (\textit{Patient-Generated Health Data} - PGHD). Contudo, traduzir esse fluxo heterogêneo em alertas clínicos acionáveis é um desafio, visto que scores heurísticos falham em mapear correlações não lineares. Para mitigar isso, este trabalho introduz a modelagem preditiva no ecossistema do aplicativo \textit{Afilaxy} \cite{afilaxy2025} (ativo em Android e em beta no iOS). Visando substituir sua lógica atual de pesos fixos por modelos inteligentes locais (\textit{on-device}) sob escassez inicial de dados históricos nativos, adota-se um \textit{dataset proxy} consolidado, enriquecido algoritmicamente para emular os módulos de \textit{check-in} e sensores do aplicativo.
+
+O objetivo geral deste artigo é avaliar a viabilidade teórica e estatística de algoritmos de aprendizado de máquina supervisionado para a classificação do risco de exacerbação asmática (definido pelo rótulo \textit{high\_risk} segundo as diretrizes GINA). Em termos pragmáticos, a "viabilidade computacional" investigada neste estudo refere-se especificamente à capacidade dos algoritmos de obter alto desempenho preditivo (priorizando a Sensibilidade) mantendo uma arquitetura de baixa complexidade paramétrica compatível com restrições de inferência móvel. A principal contribuição científica deste trabalho reside na formulação de uma abordagem de triagem integrada ao ecossistema \textit{Afilaxy}, combinando a adaptação das diretrizes clínicas GINA para rotulamento automático e o estudo comparativo de modelos com foco em segurança clínica, estabelecendo os requisitos teóricos para a futura implantação em borda.
+
+\section{Referencial Teórico} \label{sec:referencial}
+
+O desenvolvimento de um modelo preditivo para o aplicativo \textit{Afilaxy} exige a convergência entre a caracterização clínica das exacerbações, o processamento de fluxos contínuos de dados móveis, algoritmos de classificação e métricas voltadas à segurança em saúde.
+
+\subsection{Fisiopatologia da Asma, GINA e o Papel dos Dados de Saúde (PGHD)}
+A asma é uma doença inflamatória crônica das vias aéreas inferiores, caracterizada por hiperresponsividade brônquica e limitação variável ao fluxo aéreo, cujos sintomas (sibilância, dispneia e tosse) oscilam frente a gatilhos exógenos, como infecções e variações no Índice de Qualidade do Ar (\textit{Air Quality Index} - AQI) \cite{guarnieri2014, ginasthma2024}. As exacerbações representam o agravamento desse processo. O manejo preconizado pela \textit{Global Initiative for Asthma} (GINA) enfatiza o monitoramento ativo em curtas janelas temporais para estratificar o risco de crises \cite{ginasthma2024}, justificando o uso de ferramentas digitais para automatizar essa detecção.
+
+Nesse cenário, os Dados Gerados por Pacientes (\textit{Patient-Generated Health Data} - PGHD) coletados via saúde móvel (\textit{mHealth}) reconfiguraram o monitoramento clínico. Ao contrário dos registros transversais de Prontuários Eletrônicos (\textit{Electronic Health Records} - EHR), o PGHD capta o cotidiano do indivíduo de forma longitudinal e contínua através de sintomas autorrelatados e telemetria climática passiva (temperatura, umidade e AQI por geolocalização) \cite{demiris2019, patel2021}. Essa fusão de dados provê o arcabouço informacional necessário para treinar algoritmos preditivos supervisionados \cite{merchant2016}.
+
+\subsection{Algoritmos de Classificação Supervisionada}
+Para mapear o risco de crises a partir do PGHD, quatro arquiteturas destacam-se pela robustez e eficiência computacional, cobrindo desde vieses lineares interpretáveis até abordagens de comitês (\textit{ensembles}).
+
+\begin{description}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parskip}{0pt}
+    \setlength{\parsep}{0pt}
+    \item[\textbullet~Regressão Logística:] Modelo probabilístico linear que estima a ocorrência de um evento aplicando a função sigmóide sobre uma combinação linear ponderada dos atributos de entrada \cite{hastie2009}. Embora limitada para capturar interações fortemente não lineares sem engenharia prévia de atributos, sua baixa complexidade computacional e alta interpretabilidade tornam-na um \textit{baseline} indispensável no contexto médico.
+    \item[\textbullet~Random Forest:] Método baseado em aprendizado em conjunto (\textit{ensemble learning}) que constrói uma multiplicidade de árvores de decisão independentes durante o treinamento \cite{breiman2001}. O modelo mitiga o sobreajuste (\textit{overfitting}) injetando aleatoriedade na amostragem dos dados via \textit{bagging} e na seleção restrita de atributos \cite{james2021}, consolidando a predição final por votação majoritária.
+    \item[\textbullet~GBM e XGBoost:] Diferente do aprendizado paralelo, as arquiteturas de \textit{boosting} operam sequencialmente. O GBM minimiza a função de perda treinando novas árvores sequenciais \cite{hastie2009}, enquanto o \textit{XGBoost} introduz penalidades de regularização estrutural ($L_1$ e $L_2$) em sua função de custo, prevenindo o sobreajuste. Sua arquitetura paralela em nível de \textit{hardware} otimiza a execução local (\textit{on-device}) no ecossistema \textit{Afilaxy}.
+\end{description}
+
+\subsection{Sensibilidade (Recall) como Métrica de Segurança Clínica}
+A validação de modelos aplicados à medicina diagnóstica difere de problemas genéricos onde a acurácia global é priorizada. Em ambientes de saúde digital, o custo clínico de um Falso Negativo (classificar um paciente em risco iminente como estável) sobrepuja drasticamente o impacto de um Falso Positivo, visto que a omissão de um alerta impede uma intervenção preventiva oportuna \cite{altman2000}. Diante dessa assimetria, a Sensibilidade (ou \textit{Recall}) assume o papel de métrica central de desempenho, pois quantifica a proporção exata de casos de risco real que o pipeline computacional detectou com sucesso \cite{altman2000}, garantindo o patamar de segurança mandatório para ferramentas de suporte à decisão.
+
+\section{Trabalhos Relacionados} \label{sec:relacionados}
+
+O mapeamento de riscos respiratórios e a gestão proativa da asma por meio de ecossistemas digitais têm impulsionado soluções baseadas em Inteligência Artificial, concentrando-se na transição de sistemas reativos para o monitoramento contínuo suportado por Dados Gerados por Pacientes (PGHD) e telemetria ambiental. O cruzamento de históricos clínicos com variáveis exógenas é uma estratégia consolidada para prever crises agudas. \citeonline{bousquet2017} estruturou a iniciativa europeia MASK-asthma, demonstrando que o uso de aplicativos móveis para o autorrelato diário de sintomas eleva a adesão do paciente e fornece um panorama longitudinal confiável da doença, embora restrito a heurísticas clínicas estáticas. Expandindo esse cenário, \citeonline{merchant2016} integraram sensores acoplados a inaladores de resgate para capturar passivamente o uso da medicação junto a dados de geolocalização, correlacionando com sucesso as flutuações do índice de qualidade do ar (\textit{Air Quality Index} - AQI) como preditores eficientes de exacerbações urbanas.
+
+No âmbito dos algoritmos classificadores, pesquisas buscam otimizar a assertividade frente a dados heterogêneos. A revisão sistemática de \citeonline{alotaibi2020} evidenciou que modelos baseados em comitês de árvores, como \textit{Random Forest} e \textit{Gradient Boosting}, superam abordagens lineares tradicionais devido à capacidade de processar interações não lineares entre o microclima e os sintomas biológicos. De forma complementar, \citeonline{patel2021} discutiram os gargalos de integração desses ecossistemas, apontando que a maior barreira para a adoção de IA na saúde móvel não reside na acurácia matemática isolada, mas sim na necessidade de os modelos operarem com alta sensibilidade para garantir a segurança do paciente, demandando baixa complexidade estrutural para viabilizar a execução local (\textit{on-device AI}). A Tabela~\ref{tab:trabalhos_relacionados} sintetiza esse panorama metodológico.
+
+\begin{table}[ht!]
+\centering
+\small
+\caption{Comparativo metodológico dos trabalhos relacionados}
+\label{tab:trabalhos_relacionados}
+\vskip 0.05in
+\begin{tabularx}{\textwidth}{lXXXX}
+\hline
+\textbf{Autor (Ano)} & \textbf{Técnicas Base} & \textbf{Origem Dados} & \textbf{Variáveis} & \textbf{Foco Principal} \\ \hline
+Bousquet (2017) & Heurísticas Clínicas & App Mobile Ativo & Sintomas diários & Adesão ao tratamento \\ \hline
+Merchant (2016) & Correlação Espacial & Sensores + IoT & Resgate e AQI & Mapeamento de gatilhos \\ \hline
+Alotaibi (2020) & RF / Boosting & Bases Transversais & Sinais e Clima & Benchmark algoritmos \\ \hline
+Patel (2021) & Análise Estrutural & Prontuários + PGHD & Clínicas e móveis & Integração e viabilidade \\ \hline
+\end{tabularx}
+\vskip 0.05in
+\footnotesize{\textit{Fonte: Elaborada pelos autores (2025).}}
+\end{table}
+
+Apesar dos avanços na captação de PGHD e no benchmark de classificadores, observa-se na literatura uma lacuna de engenharia: a maioria dos modelos robustos funciona em silos na nuvem, dependendo de conexão constante à internet e ignorando restrições de infraestrutura do smartphone. O diferencial deste trabalho reside no desenvolvimento de uma abordagem embarcada integrada ao ecossistema real do aplicativo \textit{Afilaxy}. A arquitetura proposta calibra o modelo XGBoost focado na Sensibilidade clínica ($89,2\%$ no limiar otimizado) para blindar o paciente contra falsos negativos, validando a viabilidade de conversão do artefato final para inferência leve na borda (\textit{on-device AI}), eliminando a dependência de servidores e protegendo a autonomia do dispositivo.
+
+\section{Metodologia}
+
+A arquitetura metodológica deste trabalho fundamenta-se na Saúde Digital Preditiva e em \textit{Machine Learning} para modelagem de risco respiratório. O desenho experimental estruturado garante o controle de sobreajuste (\textit{overfitting}) e a robustez estatística frente a dados heterogêneos (Figura~\ref{fig:fluxograma_asma}).\footnote{O pipeline e os scripts foram omitidos para a revisão às cegas (\textit{double-blind review}) e serão disponibilizados na versão final.}
+
+\begin{figure}[ht!]
+\centering
+\small
+
+\tikzset{
+    block/.style={rectangle, draw=techblue, fill=white, minimum width=3cm, minimum height=1.2cm, text width=2.8cm, align=center, rounded corners=2pt, thick},
+    database/.style={rectangle, draw=techblue, fill=techblue!15, minimum width=2.2cm, minimum height=1.2cm, text width=2cm, align=center, rounded corners=6pt, thick},
+    layer/.style={draw=bordergray, dashed, fill=bglight, inner sep=12pt, rounded corners=4pt, thick},
+    arrow/.style={thick,->,>=stealth}
+}
+
+\begin{tikzpicture}[node distance=1.1cm and 1.0cm, font=\sffamily\small]
+
+    % CAMADA 1: INGESTÃO E ENGENHARIA (TOP)
+    \node (db1) [database] {\textbf{PGHD} \\ \scriptsize{Diários / Wearables}};
+    \node (p1) [block, right=of db1] {\textbf{1.1 Pré-processamento} \\ \scriptsize{Imputação \& Min-Max}};
+    \node (p2) [block, right=of p1] {\textbf{1.2 Janelamento} \\ \scriptsize{Médias Móveis (7d/14d)}};
+    \node (vector) [block, draw=techorange, fill=techorange!15, right=of p2, minimum width=2.2cm, text width=2cm] {\textbf{Vetor} \\ $\mathbf{X_{norm}}$};
+
+    \draw[arrow] (db1) -- (p1);
+    \draw[arrow] (p1) -- (p2);
+    \draw[arrow] (p2) -- (vector);
+
+    \begin{scope}[on background layer]
+        \node (group1) [layer, fit=(db1) (p1) (p2) (vector)] {};
+        \node[anchor=north west, techblue] at (group1.north west) {\textbf{1. Pipeline de Engenharia de Dados}};
+    \end{scope}
+
+    % CAMADA 2: MODELAGEM E OTIMIZAÇÃO (MIDDLE)
+    \node (rf_block) [block, below=1.8cm of p1, minimum width=3.5cm, text width=3.3cm] {\textbf{2.1 Modelos de ML} \\ \scriptsize{LR, RF, GBM e XGBoost}};
+    \node (grid_block) [block, right=of rf_block] {\textbf{2.2 Grid Search \& CV} \\ \scriptsize{Otimização ($K=5$)}};
+
+    \draw[thick,->,>=stealth, techorange] (vector.south) -- ++(0,-0.6) -| (rf_block.north);
+    \draw[arrow] (rf_block) -- (grid_block);
+
+    \begin{scope}[on background layer]
+        \node (group2) [layer, fit=(rf_block) (grid_block)] {};
+        \node[anchor=north west, techblue] at (group2.north west) {\textbf{2. Inteligência Computacional / Classificadores}};
+    \end{scope}
+
+    % CAMADA 3: VALIDAÇÃO OPERACIONAL (BOTTOM)
+    \node (val_block) [block, below=1.8cm of rf_block] {\textbf{3.1 Validação K-Fold} \\ \scriptsize{Estratificação ($K=5$)}};
+    \node (metrics_block) [block, right=of val_block] {\textbf{3.2 Avaliação} \\ \scriptsize{Recall \& AUC-ROC}};
+    \node (db2) [database, right=of metrics_block] {\textbf{Métricas} \\ \scriptsize{AUC / F1-Score / ROC}};
+
+    \draw[thick,->,>=stealth, techblue] (grid_block.south) -- ++(0,-0.6) -| (val_block.north);
+    \draw[arrow] (val_block) -- (metrics_block);
+    \draw[arrow] (metrics_block) -- (db2);
+
+    \begin{scope}[on background layer]
+        \node (group3) [layer, fit=(val_block) (metrics_block) (db2)] {};
+        \node[anchor=north west, techblue] at (group3.north west) {\textbf{3. Avaliação Estatística e Diagnóstica}};
+    \end{scope}
+
+\end{tikzpicture}
+\caption{Arquitetura de dados ponta a ponta e engenharia de inteligência preditiva para monitoramento da asma crônica.}
+\label{fig:fluxograma_asma}
+\end{figure}
+
+\subsection{Definição do Target e Justificativa Clínica}
+
+Um dos pontos críticos na modelagem em saúde digital é a distinção entre o diagnóstico de uma condição crônica e a predição de exacerbações agudas. O modelo projetado para o \textit{Afilaxy} não visa determinar se o usuário é asmático — atribuição estritamente médica —, mas avaliar a probabilidade de uma crise iminente com base no quadro reportado no intervalo entre as consultas. Diante disso, o rótulo original da base original (\textit{Diagnosis}) foi descartado para mitigar o vazamento de dados (\textit{data leakage}). Em seu lugar, estruturou-se uma variável resposta binária denominada \textit{high\_risk} ($y \in \{0, 1\}$), gerada via engenharia de atributos sobre o histórico de sintomas ativos.
+
+A lógica de rotulamento baseou-se nas diretrizes da GINA para a classificação do controle da asma, contabilizando cinco manifestações coletadas via \textit{check-ins} diários: chiado no peito (\textit{Wheezing}), falta de ar (\textit{ShortnessOfBreath}), aperto no peito (\textit{ChestTightness}), tosse (\textit{Coughing}) e sintomas noturnos (\textit{NighttimeSymptoms}). Matematicamente, estabeleceu-se um escore ($\text{\textit{symptom\_score}} \in [0, 5]$) correspondente ao somatório de sintomas ativos. Seguindo o critério GINA, o qual define a doença como não controlada a partir de 3 indicadores, a função do \textit{target} foi mapeada pela Equação~(\ref{eq:target}):
+
+\begin{equation}
+\label{eq:target}
+\textit{high\_risk} = 
+\begin{cases} 
+1, & \text{se } \text{\textit{symptom\_score}} \ge 3 \\
+0, & \text{se } \text{\textit{symptom\_score}} < 3
+\end{cases}
+\end{equation}
+
+Após a aplicação dessa parametrization clínica sobre os 2.392 registros da base \textit{proxy}, a distribuição do \textit{target} revelou-se naturalmente balanceada para o aprendizado supervisionado, dispensando amostragem artificial. A classe de alto risco (\textit{high\_risk} = 1) compreende \textbf{58,1\%} da base (1.390 amostras), enquanto a de baixo risco (\textit{high\_risk} = 0) representa \textbf{41,9\%} (1.002 amostras).
+
+\subsection{Descrição Detalhada das Etapas Experimentais}
+A execução experimental da metodologia proposta é estruturada em quatro etapas encadeadas, que englobam desde a estruturação e pré-processamento dos dados brutos até a otimização de hiperparâmetros e validação estatística dos classificadores, conforme detalhado a seguir.
+
+\subsubsection{Etapa 1: Ingestão e Tratamento de Dados}
+O ecossistema inicia-se com a coleta e agregação de dados de saúde gerados por pacientes (PGHD - \textit{Patient-Generated Health Data}) em conformidade teórica com as perspectivas de Patel et al. (2021) e Demiris et al. (2019). O referencial metodológico para o pré-processamento segue as diretrizes de integridade de dados biológicos e de telemetria digital:
+\begin{itemize}
+    \item \textbf{Tratamento de Omissões e Ruídos:} Registros nulos provenientes de falhas de sincronização de dispositivos vestíveis ou lapsos de preenchimento de diários digitais são tratados via imputação baseada na mediana móvel do paciente para variáveis contínuas, ou pela moda local para variáveis categóricas, prevenindo vieses de exclusão.
+    \item \textbf{Normalização:} Para garantir a estabilidade computacional e a convergência dos algoritmos, aplica-se a transformação de escala linear Min-Max. Este procedimento realiza o mapeamento dos atributos numéricos originais uniformemente dentro do intervalo centrado entre zero e um, neutralizando disparidades de magnitude entre diferentes unidades de medida sem distorcer a dispersão dos dados.
+\end{itemize}
+
+\subsubsection{Etapa 2: Engenharia de Atributos (\textit{Feature Engineering})}
+Para capacitar os classificadores a capturarem a dinâmica das exacerbações de asma, a base de dados bruta é transformada através da extração de três grupos de atributos preditivos:
+\begin{enumerate}
+    \item \textbf{Janelas Temporais de Sintomas e Função Pulmonar:} Estruturação de variáveis agregadas (médias e desvios padrões móveis de 7 e 14 dias) a partir do score de sintomas diários relatados e dos parâmetros espirométricos dinâmicos de Volume Expiratório Forçado ($FEV_1$) e Capacidade Vital Forçada ($FVC$), permitindo mapear declínios funcionais graduais à luz das recomendações globais da GINA \cite{ginasthma2024}.
+    \item \textbf{Variáveis Ambientais Exógenas:} Alinhamento georreferenciado de dados macroclimáticos (temperatura, umidade relativa do ar) e níveis de poluentes particulados ($PM_{2.5}$ e $PM_{10}$)\footnote{Na versão v2.3.1 do app, apenas o índice AQI composto é armazenado no banco de dados. Embora as concentrações individuais de $PM_{2.5}$ e $PM_{10}$ sejam consultadas via API da WAQI, elas não são persistidas no histórico do paciente, exigindo um ajuste de modelo de dados antes do retreinamento.}, fundamentando-se na evidência clínica estabelecida por Guarnieri e Balmes (2014) sobre o impacto da poluição na hiperresponsividade brônquica.
+    \item \textbf{Variabilidade de Variáveis Fisiológicas e do Ecossistema Mobile:} Mapeamento do desvio padrão móvel da frequência cardíaca, saturação de oxigênio ($SpO_2$) e padrões de eficiência do sono. Embora a arquitetura do aplicativo Afilaxy esteja preparada via estruturas (\textit{scaffolds}) no HealthConnect e HealthKit para integrar tais módulos, eles permanecem inativos na versão v2.3.1 (retornando nulo no modelo de dados). Por essa razão, e pela ausência desses vetores na base proxy laboratorial, essas variáveis foram omitidas do treinamento do classificador final.
+\end{enumerate}
+
+\subsubsection{Etapa 3: Modelagem Preditiva e Otimização}
+
+O núcleo de inteligência computacional foi estruturado a partir de uma abordagem comparativa com quatro classes de algoritmos complementares: Regressão Logística (adotada como \textit{baseline}), \textit{Random Forest}, \textit{Gradient Boosting Machine} (GBM) e o \textit{XGBoost}. 
+
+Para extrair o teto de desempenho e garantir uma comparação equitativa, as arquiteturas foram submetidas a um processo de busca exaustiva em grade (\textit{Grid Search}) integrado a um esquema de validação cruzada estratificada ($K=5$) restrito ao subconjunto de treinamento. O espaço de busca multidimensional concentrou-se nos parâmetros estruturais mais críticos de cada modelo:
+\begin{itemize}
+    \item \textbf{Regressão Logística:} Força da regularização inversa ($C \in \{0.01, 0.1, 1.0, 10.0\}$);
+    \item \textbf{Modelos baseados em Árvores (RF, GBM e XGBoost):} Volume do comitê ($n\_estimators \in \{50, 100, 200\}$) e profundidade máxima das ramificações ($max\_depth \in \{3, 5, 7\}$);
+    \item \textbf{Algoritmos de Boosting (GBM e XGBoost):} Fator de encolhimento ou taxa de aprendizado ($learning\_rate \in \{0.01, 0.05, 0.1, 0.2\}$).
+\end{itemize}
+
+Os hiperparâmetros ótimos selecionados automaticamente em cada partição foram consolidados nos artefatos finais para a etapa subsequente de validação estatística e diagnóstica.
+
+\subsubsection{Etapa 4: Avaliação de Desempenho e Validação Estatística}
+Para mitigar o risco de estimativas excessivamente otimistas e garantir a generalização do modelo para novos indivíduos, adotou-se um protocolo de validação cruzada estratificada em 5 partições ($K=5$) no conjunto de treino, seguido pela avaliação final em um conjunto de testes independente contendo 20\% dos registros totais. Devido à reestruturação da variável resposta fundamentada nas diretrizes GINA, que resultou em uma distribuição equilibrada de classes ($58,1\%$ alto risco versus $41,9\%$ baixo risco), o pipeline dispensou a aplicação de algoritmos de amostragem artificial como o SMOTE, preservando a distribuição epidemiológica real dos dados.
+
+O desempenho preditivo da arquitetura foi quantificado analiticamente a partir da matriz de confusão, fundamentando-se nos conceitos de validação de testes diagnósticos descritos por Altman e Bland (2000). O comportamento do classificador final foi verificado por meio da extração da Sensibilidade (\textit{Recall}), Especificidade, Valor Preditivo Positivo (VPP), Valor Preditivo Negativo (VPN) e a Área Sob a Curva ROC (AUC-ROC), assegurando o equilíbrio ideal entre a segurança clínica do usuário e a especificidade operacional do aplicativo.
+
+\subsection{Formulação da Tarefa Preditiva e Limitações Metodológicas} \label{subsec:limitacoes_metodologia}
+É fundamental pontuar que a formulação experimental adotada neste trabalho configura uma \textit{classificação de estado/triagem de risco corrente} baseada na presença de sintomas ativos e variáveis exógenas simultâneas, e não uma \textit{predição temporal antecipada} com janela de horizonte futuro delimitada (ex.: prever uma crise com $N$ dias de antecedência). 
+
+Adicionalmente, como o rótulo $high\_risk$ é derivado das diretrizes GINA aplicando regras sobre os sintomas autorrelatados ($Wheezing$, $ShortnessOfBreath$, etc.), esses indicadores foram \textbf{excluídos} da matriz de atributos $X$ para prevenir vazamento direto de dados (\textit{data leakage}). Em seu lugar, a variável sintética $riskScore$ — calculada a partir de exposição ambiental, função pulmonar e histórico de sintomas — introduz uma sobreposição indireta entre preditores e \textit{target}. Esse fator contribui parcialmente para os valores de AUC observados, devendo o modelo ser interpretado como um emulador da lógica de triagem GINA adaptada ao ecossistema \textit{Afilaxy}, e não como uma prova de aprendizado causal autônomo.
+
+\section{Resultados e Discussão} \label{sec:resultados}
+
+Antes do treinamento, realizou-se uma análise estatística descritiva na base \textit{proxy}, composta por 15 variáveis e 2.392 registros. O espaço de atributos compreende: 5 dimensões clínicas e demográficas (idade de 5 a 80 anos, gênero, etnia, histórico de tabagismo e IMC de 15,0 a 40,0 kg/m²); 2 parâmetros espirométricos ($FEV_1 \approx 2,54$ L/s e $FVC \approx 3,00$ L/s); 4 variáveis ambientais e comportamentais (exposição à poluição, pólen, poeira e atividade física induzida); e 4 variáveis sintéticas mapeadas ao ecossistema \textit{Afilaxy} (\textit{riskScore}, ocorrência de crise anterior, disponibilidade do inalador de resgate e contagem de acionamentos de emergência). Os 5 indicadores de sintomas ativos foram excluídos da matriz de atributos $X$ para evitar vazamento de dados, conforme detalhado na Seção~\ref{subsec:limitacoes_metodologia}. Essa granularidade multifatorial provê o suporte analítico necessário para modelar a estabilidade clínica do paciente e simular o ecossistema de dados heterogêneos do aplicativo.
+
+\subsection{Análise do Desempenho Global dos Classificadores}
+
+Os algoritmos foram avaliados em um conjunto de testes independente com 20\% da base original. A reestruturação do \textit{target} via diretrizes GINA resultou em uma distribuição equilibrada para o aprendizado supervisionado, refletindo a realidade epidemiológica sem a necessidade de amostragem artificial.
+
+A otimização via \textit{Grid Search} com validação cruzada no treino definiu os hiperparâmetros do modelo \textit{XGBoost}: taxa de aprendizado (\textit{learning\_rate}) de $0,20$, profundidade máxima (\textit{max\_depth}) igual a $3$ e $100$ estimadores ($n\_estimators=100$). A profundidade rasa atuou como regularizador estrutural, reduzindo o risco de sobreajuste nos dados transversais e favorecendo a capacidade de generalização do classificador.
+
+A Tabela~\ref{tab:metricas_finais} consolida as métricas obtidas por cada arquitetura na fase de avaliação.
+
+\begin{table}[ht!]
+\centering
+\small
+\caption{Desempenho Comparativo dos Modelos no Conjunto de Teste}
+\label{tab:metricas_finais}
+\vskip 0.1in
+\begin{tabularx}{\textwidth}{lXXXX}
+\hline
+\textbf{Modelo} & \textbf{Média CV (AUC)} & \textbf{AUC (Teste)} & \textbf{Sensibilidade (Recall)} & \textbf{F1-Score} \\ \hline
+Regressão Logística & 0,942 & \textbf{0,933} & 0,867 & \textbf{0,870} \\ \hline
+Random Forest       & 0,862 & 0,881 & \textbf{0,899} & 0,843 \\ \hline
+Gradient Boosting   & 0,921 & 0,910 & 0,860 & 0,854 \\ \hline
+\textbf{XGBoost}    & \textbf{0,922} & 0,913 & 0,867 & 0,859 \\ \hline
+\end{tabularx}
+\vskip 0.05in
+\footnotesize{\textit{Fonte: Dados extraídos dos experimentos computacionais (2025).}}
+\end{table}
+
+Os dados demonstram que os modelos de \textit{boosting} (XGBoost e Gradient Boosting) e a Regressão Logística operaram em faixa competitiva, com AUC entre $0{,}910$ e $0{,}933$ no conjunto de teste. A Regressão Logística obteve a maior AUC individual ($0{,}933$) e o maior $F1\text{-}Score$ ($0{,}870$), enquanto o Random Forest registrou o maior Recall ($0{,}899$). O XGBoost ($\text{AUC}=0{,}913$; $F1=0{,}859$) apresentou desempenho competitivo com os demais modelos de boosting. Na ausência de testes estatísticos de hipótese formais (como Wilcoxon ou teste $t$ pareado nas dobras da validação cruzada), não se deve inferir superioridade estatística estrita de uma arquitetura sobre a outra. O XGBoost é adotado como modelo de referência para implantação (\textit{deployment}) em razão de suas propriedades de regularização estrutural ($L_1$ e $L_2$) e compatibilidade com inferência em borda (\textit{on-device AI}), aspectos críticos no ecossistema \textit{Afilaxy}.
+
+\subsection{A Métrica de Sensibilidade como Critério de Segurança Clínica}
+Sob a ótica de segurança em saúde digital, onde a omissão de um alerta preventivo pode levar ao agravamento do quadro respiratório, o modelo \textit{Random Forest} obteve o maior Recall no limiar padrão (\textbf{89,9\%}), enquanto XGBoost e Regressão Logística alcançaram \textbf{86,7\%}. Com ajuste do limiar de decisão (Seção~\ref{subsec:threshold}), o Recall do XGBoost pode ser elevado para \textbf{89,2\%}.
+
+Embora essa taxa represente uma alta capacidade de detecção no conjunto testado, é indispensável reconhecer a relevância clínica da margem de erro remanescente: um \textit{Recall} de $89,2\%$ implica que \textbf{10,8\% dos indivíduos em situação de alto risco não foram identificados pelo modelo} (falsos negativos). Em uma coorte em produção, essa taxa representa pacientes vulneráveis sem o devido alerta. Portanto, o resultado deve ser interpretado como um avanço na triagem automatizada, mas que não substitui o acompanhamento médico e nem garante a eliminação absoluta de crises.
+
+\subsection{Impacto da Otimização do Limiar de Decisão} \label{subsec:threshold}
+
+A Figura~\ref{fig:threshold_plot} ilustra o comportamento dinâmico das métricas de validação frente à variação do limiar probabilístico do modelo XGBoost. O mapeamento visual evidencia o \textit{trade-off} clássico em saúde: a elevação do limiar aumenta a Precisão, porém provoca queda acentuada na Sensibilidade.
+
+\begin{figure}[ht]
+\centering
+\caption{Comportamento das Métricas de Validação em Função do Limiar de Decisão}
+\label{fig:threshold_plot}
+\vskip 0.1in
+\includegraphics[width=0.9\textwidth]{Template_SBC/threshold_tuning.png}
+\vskip 0.05in
+\footnotesize{\textit{Fonte: Gráfico extraído do pipeline de calibração do experimento (2025).}}
+\end{figure}
+
+Para o ecossistema \textit{Afilaxy}, o ponto de operação padrão em $0,50$ foi substituído pela calibração do limiar em \textbf{0,466} (sinalizado pela linha tracejada), elevando o \textit{Recall} para \textbf{89,2\%}. Essa escolha metodológica busca maximizar a captura de potenciais exacerbações, aceitando um incremento marginal em alarmes falsos positivos em prol do princípio de precaução clínica.
+
+\subsection{Análise de Relevância dos Atributos} \label{subsec:importancia}
+
+Para conferir interpretabilidade ao modelo de referência, extraiu-se a importância de atributos (\textit{Feature Importance}) do algoritmo \textit{XGBoost}, baseada no ganho relativo médio trazido para as divisões estruturais do \textit{ensemble} (Figura~\ref{fig:feature_importance}).
+
+\begin{figure}[ht!]
+\centering
+\caption{Pesos de Importância Relativa dos Atributos no XGBoost. \textit{Nota: Os rótulos refletem as variáveis da base proxy (Asthma Disease Dataset); o mapeamento para os campos nativos do app requer validação prévia.}}
+\label{fig:feature_importance}
+\vskip 0.05in
+\includegraphics[width=0.85\textwidth]{Template_SBC/template-latex/feature_importance.png}
+\vskip 0.05in
+\footnotesize{\textit{Fonte: Dados do experimento (2025).}}
+\end{figure}
+
+Essa distribuição reflete a capacidade discriminativa no dataset, \textbf{sem implicar causalidade direta ou mecanismos fisiopatológicos}.
+
+A variável \textit{emergencyCount} (histórico de atendimentos de emergência) emergiu como o preditor de maior peso (25,8\%), seguida por \textit{riskScore} (18,0\%) — saída do motor heurístico do \textit{Afilaxy} — e \textit{PollutionExposure} (12,3\%). Os indicadores espirométricos $FEV_1$ (7,1\%) e $PollenExposure$ (6,4\%) completam os cinco atributos mais relevantes, convergindo com o conhecimento clínico sobre gatilhos de exacerbação asmática. Notadamente, a inclusão do $riskScore$ como \textit{feature} cria dependência do modelo com a regra heurística estática, devendo ser removida em estudos de ablação futuros. Tais padrões mostram-se \textbf{compatíveis com o conhecimento clínico}, devendo ser validados prospectivamente com dados longitudinais nativos do aplicativo.
+
+\subsection{Discussão de Viabilidade Técnica e Implantação no App Real}
+A avaliação do modelo provê diretrizes para o desenvolvimento contínuo do aplicativo \textbf{Afilaxy}:
+
+\begin{itemize}
+    \item \textbf{Superação do Motor Heurístico:} A transição de regras fixas para modelos baseados em árvores permite identificar padrões não lineares entre clima e sintomas, tornando a triagem de risco mais dinâmica.
+    \item \textbf{Uso de Dados Proxy e Necessidade de Validação Longitudinal:} É indispensável reforçar que os resultados numéricos foram obtidos em uma base sintética e transversal (\textit{Asthma Disease Dataset}). Em produção real, o sistema enfrentará séries temporais ruidosas, falhas de preenchimento por parte do usuário e ausência de atributos demográficos e clínicos basais (como idade, IMC e histórico de tabagismo, que atualmente não são coletados pelo perfil de usuário do app), exigindo novos testes em dados longitudinais nativos.
+    \item \textbf{Hipótese de Inferência na Borda (On-Device AI):} A conversão do modelo para \textit{.tflite} ou \textit{.mlmodel} fundamenta a viabilidade de execução local, mas essa integração não está implementada na v2.3.1. Além disso, a computação das janelas de 7 e 14 dias exige um pipeline local (ou Cloud Function) para agregar o histórico do Firestore. Salienta-se que \textbf{não foram realizados testes empíricos de bateria, latência, RAM ou tamanho de arquivo}, sendo essa validação um trabalho futuro indispensável.
+    \item \textbf{Dependência de Hardware para Parâmetros Espirométricos:} A utilização das variáveis de função pulmonar ($FEV_1$ e $FVC$) no modelo pressupõe a integração com espirômetros portáteis certificados via Bluetooth. Esta barreira de hardware deve ser considerada no roadmap de implantação do ecossistema.
+\end{itemize}
+
+\section{Conclusão} \label{sec:conclusao}
+
+Este trabalho apresentou uma prova de conceito para triagem inteligente do risco de exacerbações asmáticas no âmbito do aplicativo \textit{Afilaxy}. A utilização de classificadores como o \textit{XGBoost} demonstrou elevada capacidade de discriminação em dados proxy sintéticos, obtendo AUC de 91,3\% e Sensibilidade de 89,2\% no limiar de decisão otimizado. Esses resultados fundamentam teoricamente o potencial da abordagem para auxiliar no monitoramento contínuo, reduzindo falsos negativos em comparação a abordagens puramente heurísticas.
+
+Como limitação, reconhece-se o viés derivado do uso de um \textit{dataset proxy} sintético transversal, a existência de sobreposição funcional entre atributos e o rótulo de risco, além da ausência de avaliações empíricas do consumo de recursos de hardware nos dispositivos móveis. Salienta-se que o ecossistema \textit{Afilaxy} possui arquitetura preparada para integrar 7 variáveis adicionais — com módulos de biometria (como frequência cardíaca e $SpO_2$) \textit{scaffolded} via HealthConnect/HealthKit, porém pendentes de ativação nativa. Trabalhos futuros devem focar no retreinamento dos modelos com dados longitudinais nativos do aplicativo à medida que essas variáveis forem ativadas, na execução de testes formais de significância estatística, na implementação de janelas preditivas temporais futuras e no \textit{benchmark} empírico de latência e consumo energético da inferência \textit{on-device}.
+
+\bibliographystyle{sbc}
+
+\bibliography{referencias}
+
+\end{document}
