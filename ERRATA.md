@@ -8,6 +8,25 @@
 
 ---
 
+## Adendo (novembro de 2026): estudo de ablação
+
+Um estudo de ablação posterior à publicação reproduziu exatamente os resultados da Tabela 3 (XGBoost: AUC 0,913; recall 0,892 no limiar 0,466). No entanto, ao remover as três variáveis sintéticas derivadas do rótulo (`riskScore`, `hadCrisisToday` e `emergencyCount`, geradas a partir do `symptom_score`, que também define `high_risk`), a AUC de todos os modelos cai para cerca de 0,50, equivalente ao acaso.
+
+| Cenário | AUC do XGBoost (teste) | AUC média (30 dobras) |
+|---|---|---|
+| Original (15 variáveis) | 0,913 | 0,925 |
+| Sem `emergencyCount` | 0,896 | 0,914 |
+| Sem as 3 variáveis derivadas do rótulo | 0,434 | 0,479 |
+| Apenas as colunas originais da base | 0,431 | 0,493 |
+
+Assim, o desempenho reportado decorre de vazamento de dados por construção, e não de capacidade preditiva. Os resultados devem ser interpretados como uma **demonstração do pipeline metodológico**, e não como evidência de que o modelo prevê o risco de exacerbação. A Seção 4.3 do artigo já indicava essa sobreposição; a ablação mostrou que ela explica a totalidade do desempenho.
+
+Os testes estatísticos (Wilcoxon pareado, 30 dobras de validação cruzada 10-fold repetida 3 vezes) indicam ainda que, no cenário original, a Regressão Logística é significativamente superior ao XGBoost (p < 0,001).
+
+Script e resultados: [`ablacao.py`](ablacao.py) e [`ablacao_resultados.csv`](ablacao_resultados.csv). Para reproduzir: `python ablacao.py asthma_disease_data.csv ablacao_resultados.csv`.
+
+---
+
 ## Resumo
 
 Depois da publicação, conferimos as 13 referências do artigo nos sites das editoras e em doi.org. Encontramos três tipos de problema:
@@ -16,7 +35,7 @@ Depois da publicação, conferimos as 13 referências do artigo nos sites das ed
 2. **Duas referências estavam descritas de forma errada:** Merchant et al. (2016) e Bousquet et al. (2017) foram citadas com afirmações que não correspondem ao conteúdo desses trabalhos.
 3. **Seis referências tinham dados bibliográficos errados**, como ano, revista, volume ou páginas.
 
-**Os dados, o código, os experimentos e os resultados não mudam.** A Tabela 3, as Figuras 2 e 3 e todas as métricas (AUC de 91,3%, Sensibilidade de 89,2% no limiar de 0,466 e os demais valores) continuam valendo como publicados. As correções afetam apenas a fundamentação teórica (Seções 1, 2 e 3), a Tabela 2 e a lista de referências.
+**As correções de referências não alteram os dados, o código, os experimentos nem os números publicados.** A Tabela 3, as Figuras 2 e 3 e todas as métricas (AUC de 91,3%, Sensibilidade de 89,2% no limiar de 0,466 e os demais valores) se reproduzem como publicados. As correções desta seção afetam apenas a fundamentação teórica (Seções 1, 2 e 3), a Tabela 2 e a lista de referências. A interpretação desses números, porém, foi revista no [adendo acima](#adendo-novembro-de-2026-estudo-de-ablação).
 
 O artigo publicado nos anais não pode ser alterado. Esta errata e a versão corrigida neste repositório substituem os trechos indicados abaixo. A responsabilidade pelos erros é dos autores, e pedimos desculpas a quem leu ou citou o trabalho.
 
